@@ -6,6 +6,7 @@ type var = string
 type loc = Lexing.position 
 
 type type_expr = 
+   | TEany
    | TEint 
    | TEbool 
    | TEunit 
@@ -45,6 +46,8 @@ type expr =
        | Let of loc * var * type_expr * expr * expr
        | LetFun of loc * var * lambda * type_expr * expr
        | LetRecFun of loc * var * lambda * type_expr * expr
+       | Try of loc * expr * var * expr
+       | Raise of loc * expr
 
 and lambda = var * type_expr * expr 
 val loc_of_expr : expr -> loc 

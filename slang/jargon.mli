@@ -23,6 +23,7 @@ type stack_item =
   | STACK_HI of heap_index    (* Pointer into Heap            *) 
   | STACK_RA of code_index    (* return address               *) 
   | STACK_FP of stack_index   (* Frame pointer                *) 
+  | STACK_EP of stack_index   (* Stack pointer                *)
 
 type heap_type = 
     | HT_PAIR 
@@ -66,6 +67,9 @@ type 'a instruction =
   | GOTO of 'a * location
   | LABEL of 'a * label
   | HALT of 'a
+  | TRY of 'a * location
+  | UNTRY of 'a 
+  | RAISE of 'a
 
 type vm_state = 
   {
@@ -77,6 +81,7 @@ type vm_state =
     code        : unit instruction array;
     mutable sp : stack_index;  (* stack pointer *) 
     mutable fp : stack_index;  (* frame pointer *) 
+    mutable ep : stack_index;  (* exception pointer*)
     mutable cp : code_index;   (* code pointer  *) 
     mutable hp : heap_index;   (* next free     *) 
     mutable status : status_code; 

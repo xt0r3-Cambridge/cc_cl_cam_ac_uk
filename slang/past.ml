@@ -8,6 +8,7 @@ type var = string
 type loc = Lexing.position 
 
 type type_expr = 
+   | TEany
    | TEint
    | TEbool 
    | TEunit 
@@ -47,6 +48,8 @@ type expr =
        | Let of loc * var * type_expr * expr * expr
        | LetFun of loc * var * lambda * type_expr * expr
        | LetRecFun of loc * var * lambda * type_expr * expr
+       | Try of loc * expr * var * expr
+       | Raise of loc * expr
 
 and lambda = var * type_expr * expr 
 
@@ -75,6 +78,8 @@ let  loc_of_expr = function
     | Let(loc, _, _, _, _)          -> loc 
     | LetFun(loc, _, _, _, _)       -> loc 
     | LetRecFun(loc, _, _, _, _)    -> loc 
+    | Try(loc, _, _, _)             -> loc
+    | Raise(loc, _)                 -> loc
 
 
 let string_of_loc loc = 
@@ -90,6 +95,10 @@ open Format
 *) 
 
 let rec pp_type = function 
+(*| BIG -> "big"   
+  | HARD -> "hard" 
+  | THROBBING -> "throbbing"*)
+  | TEany -> "any"
   | TEint -> "int" 
   | TEbool -> "bool" 
   | TEunit -> "unit" 
@@ -161,6 +170,12 @@ let rec pp_expr ppf = function
     | LetRecFun(_, f, (x, t1, e1), t2, e2)     -> 
          fprintf ppf "@[letrec %a(%a : %a) : %a =@ %a @ in %a @ end@]" 
                      fstring f fstring x  pp_type t1 pp_type t2 pp_expr e1 pp_expr e2
+    | Try(_, e1, x, e2) -> 
+        fprintf ppf "@[try %a except %a %a]"
+                    pp_expr e1 fstring x pp_expr e2
+    | Raise(_, e) ->
+      fprintf ppf "@[raise %a]"
+      pp_expr e
 
 let print_expr e = 
     let _ = pp_expr std_formatter e
@@ -197,6 +212,7 @@ let mk_con con l =
     in aux (con ^ "(") l 
 
 let rec string_of_type = function 
+  | TEany             -> "TEany"
   | TEint             -> "TEint" 
   | TEbool            -> "TEbool" 
   | TEunit            -> "TEunit" 
@@ -244,6 +260,16 @@ let rec string_of_expr = function
 	     string_of_expr e; 
 	     mk_con "" [x1; string_of_type t1; string_of_expr e1]; 
 	     mk_con "" [x2; string_of_type t1; string_of_expr e2]]
+    | Try(_, e1, x, e2) ->
+      mk_con "Try" [
+        string_of_expr e1;
+        x;
+        string_of_expr e2
+      ]
+    | Raise(_, e) ->
+      mk_con "Raise" [
+        string_of_expr e
+      ]
 
 and string_of_expr_list = function 
   | [] -> "" 

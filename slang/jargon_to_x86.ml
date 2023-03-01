@@ -249,7 +249,7 @@ let emit_x86 e =
 	     cmd "pushq %rbp"         "save the frame pointer";
 	     cmd "movq %rsp,%rbp"     "set new frame pointer";	     	     
       	     cmd "call *%rax"         "call pushes return address, jumps to function";
-	     cmd "popq %rbp"          "retore base pointer";	     
+	     cmd "popq %rbp"          "restore base pointer";	     
 	     cmd "addq $8, %rsp"      "pop closure";
 	     cmd "addq $8, %rsp"      "pop argument";
 	     cmd "pushq %rax"         "END apply, push returned value on stack \n")
@@ -257,6 +257,26 @@ let emit_x86 e =
     in let ret () = 
 	    (cmd "popq %rax"         "BEGIN return. put top-of-stack in %rax";
       	     cmd "ret"               "END retrun, this pops return address, jumps there \n")
+
+		in let add_try loc =
+			(cmd "pushq %r12$" "push exception pointer";
+			 cmd "pushq %rbp"   "push frame pointer";
+			 cmd ("pushq $" ^ loc)   "push code pointer \n")
+
+		in let untry () =
+			(cmd "movq %r11, 24(%rsq)"  "Move current exception pointer to the exception pointer register";
+			 cmd "movq %rsq, 24(%rsq)"	"Move value from top of the stack to the place it is going to be after popping from the stack";
+			 cmd "addq $24, %rsp"				"Pop the top 3 elements from the stack \n")
+
+		in let raise () = 
+			(cmd "movq (%rsq), %r13"	"Copy stack pointer to r13";
+			 cmd "movq (%r12), %rsq"	"Copy exception pointer to stack pointer";
+			 cmd "addq $16, %r12" 			"Prepare for handling the exception";
+			 cmd "jmp %r12"			"Restore code pointer";
+			 cmd "movq 8(%r12), %rbp"		"Restore frame pointer";
+			 cmd "movq 16(%r12), %r12"	"Restore exception pointer";
+			 cmd "movq %r13, %rsq"	"Copy value from top of the old stack to the new stack \n")
+
 	    
     (* emit command *) 	    
     in let emitc = function
@@ -288,7 +308,11 @@ let emit_x86 e =
 	  | PUSH(_, STACK_HI _)       -> complain "Internal Error : Jargon code never explicitly pushes stack pointer"
 	  | PUSH(_, STACK_RA _)       -> complain "Internal Error : Jargon code never explicitly pushes return address"
 	  | PUSH(_, STACK_FP _)       -> complain "Internal Error : Jargon code never explicitly pushes frame pointer"
+	  | PUSH(_, STACK_EP _)       -> complain "Internal Error : Jargon code never explicitly pushes exception pointer"
 	  | HALT _                  -> complain "HALT found in Jargon code from Jargon.comp"
+		| TRY(_, (loc, _)) -> add_try loc
+		| UNTRY _ -> untry ()
+		| RAISE _ -> raise ()
 
     in let rec emitl = function [] -> () | c::l -> (emitc c; emitl l)
 

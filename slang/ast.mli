@@ -30,6 +30,8 @@ type 'a expr =
        | App of 'a * 'a expr * 'a expr
        | LetFun of 'a * var * 'a lambda * 'a expr
        | LetRecFun of 'a * var * 'a lambda * 'a expr
+       | Try of 'a * 'a expr * var * 'a lambda
+       | Raise of 'a * 'a expr
 
 and 'a lambda = 'a * Past.var * 'a expr
 
